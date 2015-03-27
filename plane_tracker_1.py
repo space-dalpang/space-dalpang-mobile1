@@ -130,7 +130,9 @@ class App:
         self.frame = None
         self.paused = False
         self.tracker = PlaneTracker()
+
         self.before_tracked = {}
+        self.weight = 10
 
         cv2.namedWindow('plane')
         self.rect_sel = common.RectSelector('plane', self.on_rect)
@@ -153,27 +155,37 @@ class App:
                 unupdated_indexes = self.before_tracked.keys()
                 for index, tr in tracked:
                     trq = tr.quad
-                    # cv2.polylines(vis, [np.int32(trq)], True, (0, 0, 255), 2)
+                    ntrq = np.array(trq)
+                    cv2.polylines(vis, [np.int32(trq)], True, (0, 0, 255), 2)
                     if index in self.before_tracked:
                         unupdated_indexes.remove(index)
-                        btrq = self.before_tracked[index]
-                        weight = 3
-                        ntrq = np.array(trq)
-                        nbtrq = np.array(btrq)
-                        nwp = (ntrq + (weight * nbtrq)) / (weight + 1)
-                        dct = np.array([(((ntrq[0][0] + ntrq[3][0])/2) - ((nbtrq[0][0] + nbtrq[3][0])/2)) , (((ntrq[0][1] + ntrq[3][1])/2) - ((nbtrq[0][1] + nbtrq[3][1])/2))])
-                        # print dct
-                        for i in range(4):
-                            nwp[i] = nwp[i] + dct
-                        trq = nwp
+                        btrql = list(self.before_tracked[index])
+                        btrql.append(ntrq)
+                        nwp = np.mean(btrql, axis=0)
+                        # dct = np.array([(((ntrq[0][0] + ntrq[3][0])/2) - ((nbtrq[0][0] + nbtrq[3][0])/2)) , (((ntrq[0][1] + ntrq[3][1])/2) - ((nbtrq[0][1] + nbtrq[3][1])/2))])
+                        # # print dct
+                        # for i in range(4):
+                        #     nwp[i] = nwp[i] + dct
+                        cv2.polylines(vis, [np.int32(nwp)], True, (255, 0, 0), 2)
                         # cv2.polylines(vis, [np.int32(ntrq)], True, (0, 0, 255), 1)
                         # (np.array(trq) - np.array(btrq)) / 2
                         # trq = [((x[0][0]+x[1][0])/2, (x[0][1]+x[1][1])/2) for x in zip(trq, btrq)]
                         # print trq
-                    cv2.polylines(vis, [np.int32(trq)], True, (255, 0, 0), 2)
-                    self.before_tracked[index] = trq
-                    for (x, y) in np.int32(tr.p1):
-                        cv2.circle(vis, (x, y), 2, (0, 255, 0))
+                        
+                    else:
+                        cv2.polylines(vis, [np.int32(trq)], True, (255, 0, 0), 2)
+
+
+                    if not index in self.before_tracked:
+                        self.before_tracked[index] = list()
+
+                    if len(self.before_tracked[index]) >= self.weight:
+                        self.before_tracked[index] = self.before_tracked[index][1:]
+
+                    self.before_tracked[index].append(ntrq)
+
+                    # for (x, y) in np.int32(tr.p1):
+                    #     cv2.circle(vis, (x, y), 2, (0, 255, 0))
 
                 for index in unupdated_indexes:
                     del(self.before_tracked[index])
