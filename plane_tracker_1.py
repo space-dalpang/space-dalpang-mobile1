@@ -132,7 +132,7 @@ class App:
         self.tracker = PlaneTracker()
 
         self.before_tracked = {}
-        self.weight = 10
+        self.weight = 3
 
         cv2.namedWindow('plane')
         self.rect_sel = common.RectSelector('plane', self.on_rect)
